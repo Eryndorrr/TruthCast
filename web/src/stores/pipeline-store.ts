@@ -122,6 +122,9 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
         set({ detectData: result, strategy: result.strategy ?? null });
         setPhase('detect', 'done');
         toast.success('风险快照完成');
+        if (result.truncated) {
+          toast.warning('输入文本较长，已自动截断至 8000 字符以内进行分析');
+        }
       })
       .catch((err) => {
         setPhase('detect', 'failed');

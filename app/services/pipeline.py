@@ -101,7 +101,8 @@ def build_report(
     for item in evidences:
         by_claim[item.claim_id].append(item)
 
-    score = 55
+    # score 表示风险程度，越高风险越大（0=安全，100=极高风险）
+    score = 45
     suspicious_points: list[str] = []
     claim_reports = []
 
@@ -126,13 +127,13 @@ def build_report(
             notes.append(f"对齐结论：{rationales[0]}")
 
         if stance == "refute":
-            score_delta = -12
+            score_delta = 12   # 被证据反驳 → 风险升高
             suspicious_point = f"{claim.claim_id} 被证据反驳"
         elif stance == "support":
-            score_delta = 6
+            score_delta = -6   # 有证据支持 → 风险降低
             suspicious_point = ""
         else:
-            score_delta = -4
+            score_delta = 4    # 证据不足 → 风险略升
             suspicious_point = f"{claim.claim_id} 证据不足以形成明确支持"
 
         score += score_delta
@@ -149,11 +150,11 @@ def build_report(
         )
 
     score = max(0, min(100, score))
-    if score >= 75:
+    if score <= 25:
         level, label = "low", "credible"
-    elif score >= 55:
+    elif score <= 45:
         level, label = "medium", "needs_context"
-    elif score >= 35:
+    elif score <= 65:
         level, label = "high", "suspicious"
     else:
         level, label = "critical", "likely_misinformation"

@@ -225,17 +225,18 @@ def analyze_text_complexity(text: str) -> tuple[str, str, int]:
 
 
 def infer_strategy(text: str, score: int, label: str) -> StrategyConfig:
+    # score 为风险分（越高越危险），高风险时检索更多证据
     complexity_level, complexity_reason, max_claims = analyze_text_complexity(text)
     
-    if score < 35:
+    if score >= 65:
         evidence_per_claim = 10
         risk_level = "critical"
         risk_reason = f"高风险(score={score})，最大证据检索"
-    elif score < 55:
+    elif score >= 45:
         evidence_per_claim = 7
         risk_level = "high"
         risk_reason = f"中高风险(score={score})，深度证据检索"
-    elif score < 75:
+    elif score >= 25:
         evidence_per_claim = 5
         risk_level = "medium"
         risk_reason = f"中低风险(score={score})，标准证据检索"
@@ -264,28 +265,29 @@ def infer_strategy_from_score(score: int, label: str) -> StrategyConfig:
 
 
 def score_text(text: str) -> ScoreResult:
+    # score 表示风险程度：越高风险越大（0=安全，100=极高风险）
     value = 50
     reasons: list[str] = []
 
     for word in RISK_KEYWORDS:
         if word in text:
-            value -= 12
+            value += 12
             reasons.append(f"命中高风险词：{word}")
 
     for word in TRUST_KEYWORDS:
         if word in text:
-            value += 6
+            value -= 6
             reasons.append(f"命中可信线索词：{word}")
 
     if "http://" in text or "https://" in text:
-        value += 8
+        value -= 8
         reasons.append("包含可追溯链接")
 
     value = max(0, min(100, value))
 
-    if value >= 70:
+    if value <= 30:
         label = "credible"
-    elif value >= 40:
+    elif value <= 60:
         label = "suspicious"
     else:
         label = "high_risk"

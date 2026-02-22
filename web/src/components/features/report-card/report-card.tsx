@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { FileText } from 'lucide-react';
 import { zhRiskLabel, zhRiskLevel, zhScenario, zhDomain, zhStance, zhText, zhClaimId } from '@/lib/i18n';
 import type { ReportResponse } from '@/types';
 
@@ -19,38 +20,67 @@ const riskLevelColors: Record<string, string> = {
   critical: 'bg-red-500',
 };
 
+function ReportCardSkeleton() {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <Skeleton className="h-5 w-20" />
+        <Skeleton className="h-4 w-40 mt-1" />
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {/* 风险标签行 */}
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-6 w-20 rounded-full" />
+          <Skeleton className="h-6 w-16 rounded-full" />
+          <Skeleton className="h-8 w-10" />
+        </div>
+        {/* 元信息行 */}
+        <div className="grid grid-cols-2 gap-4">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+        </div>
+        {/* 摘要段落 */}
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
+          <Skeleton className="h-4 w-4/5" />
+        </div>
+        {/* 主张结论占位 */}
+        <Skeleton className="h-24 w-full rounded-lg" />
+        <Skeleton className="h-24 w-full rounded-lg" />
+      </CardContent>
+    </Card>
+  );
+}
+
+function ReportCardEmpty() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>综合报告</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
+          <FileText className="h-8 w-8 opacity-30" />
+          <p className="text-sm">报告尚未生成</p>
+          <p className="text-xs opacity-60">请等待证据检索与分析完成</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ReportCard({ report, isLoading }: ReportCardProps) {
   if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-24" />
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <Skeleton className="h-20 w-full" />
-            <Skeleton className="h-32 w-full" />
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return <ReportCardSkeleton />;
   }
 
   if (!report) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>综合报告</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">暂无综合报告。</p>
-        </CardContent>
-      </Card>
-    );
+    return <ReportCardEmpty />;
   }
 
   return (
-    <Card>
+    <Card className="transition-opacity duration-500 animate-in fade-in">
       <CardHeader>
         <CardTitle>综合报告</CardTitle>
         <CardDescription>完整的风险分析与建议</CardDescription>
@@ -103,7 +133,10 @@ export function ReportCard({ report, isLoading }: ReportCardProps) {
           <h4 className="font-medium mb-3">主张级结论</h4>
           <div className="space-y-4">
             {report.claim_reports.map((item) => (
-              <div key={item.claim.claim_id} className="border rounded-lg p-3">
+              <div
+                key={item.claim.claim_id}
+                className="border rounded-lg p-3 hover:bg-muted/20 transition-colors"
+              >
                 <div className="flex items-start gap-2 mb-2">
                   <Badge variant="outline">{zhClaimId(item.claim.claim_id)}</Badge>
                   <Badge

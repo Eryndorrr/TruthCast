@@ -25,6 +25,7 @@ class DetectResponse(BaseModel):
     score: int
     reasons: list[str]
     strategy: StrategyConfig | None = None
+    truncated: bool = False
 
 
 class ClaimItem(BaseModel):

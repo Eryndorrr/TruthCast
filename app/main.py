@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -9,10 +11,20 @@ from app.api.routes_detect import router as detect_router
 from app.api.routes_health import router as health_router
 from app.api.routes_history import router as history_router
 from app.api.routes_simulate import router as simulate_router
+from app.core.concurrency import init_semaphore
 from app.services.history_store import init_db
 
-app = FastAPI(title="TruthCast MVP", version="0.1.0")
-init_db()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 启动时初始化
+    init_db()
+    init_semaphore()
+    yield
+    # 关闭时清理（预留）
+
+
+app = FastAPI(title="TruthCast MVP", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

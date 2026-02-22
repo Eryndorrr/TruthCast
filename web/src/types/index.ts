@@ -16,6 +16,7 @@ export type DetectResponse = {
   score: number;
   reasons: string[];
   strategy?: StrategyConfig | null;
+  truncated?: boolean;
 };
 
 export type ClaimItem = {

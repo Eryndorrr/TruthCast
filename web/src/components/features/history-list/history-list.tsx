@@ -127,7 +127,11 @@ export function HistoryList() {
         </CardHeader>
         <CardContent className="max-h-[60vh] overflow-y-auto">
           {items.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">暂无历史记录</p>
+            <div className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
+              <History className="h-8 w-8 opacity-25" />
+              <p className="text-sm font-medium">暂无历史记录</p>
+              <p className="text-xs opacity-60">完成一次分析后，结果将自动保存在此</p>
+            </div>
           ) : (
             <div className="space-y-3">
               {items.map((item) => (
