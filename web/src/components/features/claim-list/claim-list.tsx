@@ -27,10 +27,6 @@ function ClaimListSkeleton() {
                 <Skeleton className="h-5 w-12 rounded-full shrink-0" />
                 <Skeleton className="h-4 w-full" />
               </div>
-              <div className="flex gap-3">
-                <Skeleton className="h-3 w-20" />
-                <Skeleton className="h-3 w-16" />
-              </div>
             </div>
           ))}
         </div>
@@ -81,14 +77,6 @@ export function ClaimList({ claims, isLoading }: ClaimListProps) {
                 </Badge>
                 <p className="text-sm">{claim.claim_text}</p>
               </div>
-              {(claim.entity || claim.time || claim.location || claim.value) && (
-                <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                  {claim.entity && <span>实体: {claim.entity}</span>}
-                  {claim.time && <span>时间: {claim.time}</span>}
-                  {claim.location && <span>地点: {claim.location}</span>}
-                  {claim.value && <span>数值: {claim.value}</span>}
-                </div>
-              )}
             </li>
           ))}
         </ul>

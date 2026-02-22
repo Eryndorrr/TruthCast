@@ -18,6 +18,24 @@
   - **JSON 自动修复**: 内置 `json-repair` 机制，增强对 LLM 非标准 JSON 输出的解析鲁棒性。
 - **💻 现代化控制台**: 基于 Next.js 16 + Tailwind CSS 4 + shadcn/ui 构建的响应式前端，支持实时进度、历史记录回放、证据视图切换与报告导出。
 
+## 🖼️ 界面截图
+
+### 输入页
+
+![输入页](docs/images/Input.png)
+
+### 检测结果页（风险快照 + 主张 + 证据链 + 综合报告）
+
+![检测结果页](docs/images/Detection_Result.png)
+
+### 舆情预演页（SSE 流式分阶段展示）
+
+![舆情预演页](docs/images/Public_Opinion_Preview.png)
+
+### 历史记录页（列表/详情/回放/反馈）
+
+![历史记录页](docs/images/History.png)
+
 ## 🛠️ 技术栈
 
 ### 后端 (Backend)
@@ -153,6 +171,7 @@ npm run dev
 适合希望将前端托管在 CDN，后端托管在 Serverless 平台的场景。
 
 #### 1. 部署后端 (Render / Railway / Zeabur)
+
 1. 在云平台连接你的 GitHub 仓库。
 2. 设置根目录为 `/`。
 3. 构建命令: `pip install -e .`
@@ -161,6 +180,7 @@ npm run dev
 6. 部署成功后，获取后端的公网 URL（例如 `https://truthcast-api.onrender.com`）。
 
 #### 2. 部署前端 (Vercel / Netlify)
+
 1. 在 Vercel 中导入你的 GitHub 仓库。
 2. 设置 **Root Directory** 为 `web`。
 3. 框架预设选择 **Next.js**。
