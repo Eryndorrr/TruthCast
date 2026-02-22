@@ -13,10 +13,13 @@
 - **📈 舆情演化预演**:
   - **四阶段预测**: 情绪与立场分析 → 叙事分支生成 → 引爆点识别 → 应对建议生成。
   - **流式输出**: 支持 SSE (Server-Sent Events) 流式返回预演结果，提升前端响应体验。
+- **📝 应对内容生成**:
+  - 支持生成 **澄清稿（短/中/长）**、**FAQ**、以及 **多平台话术**（微博/微信公众号/小红书/抖音/快手/B站/短视频口播/新闻通稿/官方声明）。
+  - 支持澄清稿 **多风格多版本并存**，并可设置“主稿”（影响导出与历史默认版本）。
 - **🛡️ 高可用与稳定性**:
   - **规则兜底**: 所有 LLM 节点（抽取、对齐、预演等）均配备规则回退机制，确保在 LLM 失败或超时时系统依然可用。
   - **JSON 自动修复**: 内置 `json-repair` 机制，增强对 LLM 非标准 JSON 输出的解析鲁棒性。
-- **💻 现代化控制台**: 基于 Next.js 16 + Tailwind CSS 4 + shadcn/ui 构建的响应式前端，支持实时进度、历史记录回放、证据视图切换与报告导出。
+- **💻 现代化控制台**: 基于 Next.js 16 + Tailwind CSS 4 + shadcn/ui 构建的响应式前端，支持实时进度、历史记录回放、证据视图切换与报告导出（结果页/预演页/应对内容页均支持导出 JSON/Markdown）。
 
 ## 🖼️ 界面截图
 
@@ -31,6 +34,10 @@
 ### 舆情预演页（SSE 流式分阶段展示）
 
 ![舆情预演页](docs/images/Public_Opinion_Preview.png)
+
+### 应对内容生成页（澄清稿/FAQ/多平台话术）
+
+![应对内容生成页](docs/images/Response_Content.png)
 
 ### 历史记录页（列表/详情/回放/反馈）
 
@@ -65,6 +72,7 @@ TruthCast/
 │   │   ├── claim_extraction.py      # 主张抽取
 │   │   ├── evidence_alignment.py    # 证据对齐
 │   │   ├── evidence_summarization.py # 证据聚合
+│   │   ├── content_generation/      # 应对内容生成（澄清稿/FAQ/多平台话术）
 │   │   ├── history_store.py         # 历史记录
 │   │   ├── json_utils.py            # JSON 工具
 │   │   ├── opinion_simulation.py    # 舆情预演
@@ -295,6 +303,13 @@ TRUTHCAST_SIMULATION_LLM_ENABLED=true
 TRUTHCAST_SIMULATION_LLM_MODEL=gpt-4o
 TRUTHCAST_SIMULATION_MAX_NARRATIVES=3   # 生成的叙事分支数量
 TRUTHCAST_SIMULATION_MAX_RETRIES=2      # LLM 调用失败重试次数
+
+# ------------------------------------------
+# 应对内容生成 (Content Generation)
+# ------------------------------------------
+TRUTHCAST_CONTENT_LLM_ENABLED=true
+TRUTHCAST_CONTENT_LLM_MODEL=gpt-4o-mini
+TRUTHCAST_CONTENT_TIMEOUT_SEC=45
 ```
 
 ### 4. 并发与性能配置
@@ -322,18 +337,24 @@ TRUTHCAST_DEBUG_SIMULATION=true
 
 ## 🔌 API 端点概览
 
-| 端点                       | 方法 | 描述                                   |
-| -------------------------- | ---- | -------------------------------------- |
-| `/health`                | GET  | 服务健康检查                           |
-| `/detect`                | POST | 风险快照（快速评估文本风险）           |
-| `/detect/claims`         | POST | 主张抽取（提取核心事实陈述）           |
-| `/detect/evidence`       | POST | 证据检索（联网搜索相关证据）           |
-| `/detect/report`         | POST | 综合报告（生成最终核查结论并落库）     |
-| `/simulate`              | POST | 舆情预演（生成四阶段演化预测）         |
-| `/simulate/stream`       | POST | 舆情预演（SSE 流式返回，推荐前端使用） |
-| `/history`               | GET  | 获取历史分析记录列表                   |
-| `/history/{id}`          | GET  | 获取单条历史记录详情（支持回放）       |
-| `/history/{id}/feedback` | POST | 提交人工反馈（准确/不准确）            |
+| 端点                          | 方法 | 描述                                          |
+| ----------------------------- | ---- | --------------------------------------------- |
+| `/health`                   | GET  | 服务健康检查                                  |
+| `/detect`                   | POST | 风险快照（快速评估文本风险）                  |
+| `/detect/claims`            | POST | 主张抽取（提取核心事实陈述）                  |
+| `/detect/evidence`          | POST | 证据检索（联网搜索相关证据）                  |
+| `/detect/report`            | POST | 综合报告（生成最终核查结论并落库）            |
+| `/simulate`                 | POST | 舆情预演（生成四阶段演化预测）                |
+| `/simulate/stream`          | POST | 舆情预演（SSE 流式返回，推荐前端使用）        |
+| `/history`                  | GET  | 获取历史分析记录列表                          |
+| `/history/{id}`             | GET  | 获取单条历史记录详情（支持回放）              |
+| `/history/{id}/feedback`    | POST | 提交人工反馈（准确/不准确）                   |
+| `/history/{id}/simulation`  | POST | 写回/更新舆情预演结果（用于历史回放）         |
+| `/history/{id}/content`     | POST | 写回/更新应对内容草稿（用于历史回放）         |
+| `/content/generate`         | POST | 一键生成应对内容（澄清稿 + FAQ + 多平台话术） |
+| `/content/clarification`    | POST | 单独生成澄清稿                                |
+| `/content/faq`              | POST | 单独生成 FAQ                                  |
+| `/content/platform-scripts` | POST | 单独生成多平台话术                            |
 
 ## 🔄 工作流程 (Workflow)
 
@@ -356,6 +377,13 @@ TRUTHCAST_DEBUG_SIMULATION=true
 ```
 
 ## 📝 更新日志 (Changelog)
+
+### v1.1.0 (2026-02-22) - 🧩 内容闭环与联动增强
+
+- **应对内容生成**: 新增澄清稿（短/中/长）、FAQ、多平台话术生成，并支持多风格多版本与“主稿”机制。
+- **导出体验增强**: 结果页/舆情预演页/应对内容页均支持导出报告（JSON/Markdown），Markdown 中“应对内容”章节位于“舆情预演-应对建议”之后。
+- **历史回放增强**: 历史记录支持写回/恢复应对内容草稿（`/history/{id}/content`），并支持更新舆情预演结果（`/history/{id}/simulation`）。
+- **一致性与容错**: 应对内容页布局与进度时间线交互与其他页面对齐；修复“生成时间 Invalid Date”显示问题。
 
 ### v1.0.0 (2026-02-22) - 🚀 核心版本发布
 

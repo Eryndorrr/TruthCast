@@ -11,6 +11,7 @@ interface PhaseState {
   evidence: PhaseStatus;
   report: PhaseStatus;
   simulation: PhaseStatus;
+  content: PhaseStatus;
 }
 
 const phaseLabels: Record<Phase, string> = {
@@ -19,6 +20,7 @@ const phaseLabels: Record<Phase, string> = {
   evidence: '证据检索',
   report: '综合报告',
   simulation: '舆情预演',
+  content: '应对内容',
 };
 
 const phaseShortLabels: Record<Phase, string> = {
@@ -27,9 +29,10 @@ const phaseShortLabels: Record<Phase, string> = {
   evidence: '证据',
   report: '报告',
   simulation: '预演',
+  content: '应对',
 };
 
-const phaseOrder: Phase[] = ['detect', 'claims', 'evidence', 'report', 'simulation'];
+const phaseOrder: Phase[] = ['detect', 'claims', 'evidence', 'report', 'simulation', 'content'];
 
 interface ProgressTimelineProps {
   phases: PhaseState;

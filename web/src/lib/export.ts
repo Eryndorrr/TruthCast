@@ -1,5 +1,7 @@
 import type {
   ClaimItem,
+  ContentDraft,
+  ClarificationVariant,
   EvidenceItem,
   ReportResponse,
   SimulateResponse,
@@ -14,7 +16,20 @@ export interface ExportData {
   evidences: EvidenceItem[];
   report: ReportResponse | null;
   simulation: SimulateResponse | null;
+  content?: ContentDraft | null;
   exportedAt: string;
+}
+
+function resolvePrimaryClarification(content?: ContentDraft | null): ClarificationVariant | null {
+  if (!content) return null;
+  const list = content.clarifications ?? [];
+  if (content.primary_clarification_id) {
+    return list.find((v) => v.id === content.primary_clarification_id) ?? null;
+  }
+  // fallback: latest
+  return (
+    [...list].sort((a, b) => (b.generated_at || '').localeCompare(a.generated_at || ''))[0] ?? null
+  );
 }
 
 export function downloadJson(data: ExportData, filename = 'truthcast-report.json'): void {
@@ -314,6 +329,68 @@ function generateMarkdown(data: ExportData): string {
       }
     }
     lines.push('');
+  }
+
+  // 应对内容（澄清稿/FAQ/平台话术）
+  // 放置在“舆情预演 → 应对建议”之后，便于阅读：先看风险/证据/报告/预演，再看可直接使用的应对话术
+  if (data.content) {
+    lines.push('## 应对内容');
+    lines.push('');
+
+    const primary = resolvePrimaryClarification(data.content);
+    const allClarifications = data.content.clarifications ?? [];
+
+    if (primary) {
+      lines.push(`### 澄清稿（主稿：${primary.style}）`);
+      lines.push('');
+      lines.push('#### 短版');
+      lines.push('');
+      lines.push(primary.content.short);
+      lines.push('');
+      lines.push('#### 中版');
+      lines.push('');
+      lines.push(primary.content.medium);
+      lines.push('');
+      lines.push('#### 长版');
+      lines.push('');
+      lines.push(primary.content.long);
+      lines.push('');
+    }
+
+    const others = allClarifications.filter((v) => v.id !== primary?.id);
+    if (others.length > 0) {
+      lines.push('### 澄清稿（其他版本）');
+      lines.push('');
+      others
+        .sort((a, b) => (b.generated_at || '').localeCompare(a.generated_at || ''))
+        .forEach((v, idx) => {
+          lines.push(`#### 版本 ${idx + 1}（${v.style}）`);
+          lines.push('');
+          lines.push(v.content.medium);
+          lines.push('');
+        });
+    }
+
+    if (data.content.faq && data.content.faq.length > 0) {
+      lines.push('### FAQ');
+      lines.push('');
+      data.content.faq.forEach((item, idx) => {
+        lines.push(`- **Q${idx + 1}**: ${item.question}`);
+        lines.push(`  - ${item.answer}`);
+      });
+      lines.push('');
+    }
+
+    if (data.content.platform_scripts && data.content.platform_scripts.length > 0) {
+      lines.push('### 多平台话术');
+      lines.push('');
+      data.content.platform_scripts.forEach((s) => {
+        lines.push(`#### ${s.platform}`);
+        lines.push('');
+        lines.push(s.content);
+        lines.push('');
+      });
+    }
   }
 
   lines.push('---');

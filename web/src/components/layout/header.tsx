@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { FileSearch, History, LineChart, Home, Menu, X } from 'lucide-react';
+import { FileSearch, History, LineChart, Home, Menu, X, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -17,6 +17,7 @@ const navItems = [
   { href: '/', label: '任务输入', icon: Home },
   { href: '/result', label: '检测结果', icon: FileSearch },
   { href: '/simulation', label: '舆情预演', icon: LineChart },
+  { href: '/content', label: '应对内容', icon: FileText },
   { href: '/history', label: '历史记录', icon: History },
 ];
 

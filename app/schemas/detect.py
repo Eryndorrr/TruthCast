@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pydantic import BaseModel, Field
 
 
@@ -187,6 +189,7 @@ class HistoryDetailResponse(BaseModel):
     report: ReportResponse
     detect_data: DetectResponse | None = None
     simulation: SimulateResponse | None = None
+    content: ContentDraftData | None = None
     feedback_status: str | None = None
     feedback_note: str | None = None
 
@@ -194,3 +197,95 @@ class HistoryDetailResponse(BaseModel):
 class HistoryFeedbackRequest(BaseModel):
     status: str = Field(pattern="^(accurate|inaccurate|evidence_irrelevant)$")
     note: str | None = None
+
+
+# ========== 应对内容生成 Schema ==========
+
+from enum import Enum
+
+
+class ClarificationStyle(str, Enum):
+    """澄清稿风格"""
+    FORMAL = "formal"      # 正式严肃
+    FRIENDLY = "friendly"  # 亲切友好
+    NEUTRAL = "neutral"    # 中性客观
+
+
+class Platform(str, Enum):
+    """发布平台"""
+    WEIBO = "weibo"              # 微博
+    WECHAT = "wechat"            # 微信公众号
+    SHORT_VIDEO = "short_video"  # 短视频口播（通用）
+    NEWS = "news"                # 新闻通稿
+    OFFICIAL = "official"        # 官方声明
+    XIAOHONGSHU = "xiaohongshu"  # 小红书
+    DOUYIN = "douyin"            # 抖音
+    KUAISHOU = "kuaishou"        # 快手
+    BILIBILI = "bilibili"        # B站
+
+
+class FAQItem(BaseModel):
+    """FAQ 条目"""
+    question: str = Field(description="问题")
+    answer: str = Field(description="回答")
+    category: str = Field(default="general", description="分类: core/detail/background")
+
+
+class ClarificationContent(BaseModel):
+    """澄清稿内容"""
+    short: str = Field(description="短版本，约100字")
+    medium: str = Field(description="中版本，约300字")
+    long: str = Field(description="长版本，约600字")
+
+
+class PlatformScript(BaseModel):
+    """平台话术"""
+    platform: Platform
+    content: str = Field(description="话术内容")
+    tips: list[str] = Field(default_factory=list, description="发布建议")
+    hashtags: list[str] | None = Field(default=None, description="推荐标签，微博专用")
+    estimated_read_time: str | None = Field(default=None, description="预计阅读时长")
+
+
+class ContentGenerateRequest(BaseModel):
+    """应对内容生成请求"""
+    text: str = Field(description="原始新闻文本")
+    report: ReportResponse = Field(description="检测报告")
+    simulation: SimulateResponse | None = Field(default=None, description="舆情预演结果")
+    clarification: ClarificationContent | None = Field(
+        default=None,
+        description="可选：已生成澄清稿（用于复用，避免多平台话术/FAQ 重复生成澄清稿）",
+    )
+    
+    # 可选参数
+    style: ClarificationStyle = Field(default=ClarificationStyle.NEUTRAL, description="澄清稿风格")
+    platforms: list[Platform] = Field(
+        default_factory=lambda: [Platform.WEIBO, Platform.WECHAT, Platform.SHORT_VIDEO],
+        description="目标平台"
+    )
+    include_faq: bool = Field(default=True, description="是否生成FAQ")
+    faq_count: int = Field(default=5, ge=3, le=10, description="FAQ条目数量")
+
+
+class ContentGenerateResponse(BaseModel):
+    """应对内容生成响应"""
+    clarification: ClarificationContent = Field(description="澄清稿")
+    faq: list[FAQItem] | None = Field(default=None, description="FAQ列表")
+    platform_scripts: list[PlatformScript] = Field(description="多平台话术")
+    
+    # 元数据
+    generated_at: str = Field(description="生成时间")
+    based_on: dict = Field(description="生成依据摘要")
+
+
+class ContentDraftData(BaseModel):
+    """用于历史记录/局部更新的应对内容草稿数据（允许分模块逐步写入）"""
+
+    clarification: ClarificationContent | None = None
+    # 澄清稿多风格/多版本列表（前端增量生成时写入）
+    clarifications: list[dict] | None = None
+    primary_clarification_id: str | None = None
+    faq: list[FAQItem] | None = None
+    platform_scripts: list[PlatformScript] | None = None
+    generated_at: str | None = None
+    based_on: dict | None = None

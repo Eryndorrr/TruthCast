@@ -61,6 +61,7 @@ def _create_tables(db_path: Path) -> None:
                 report_json TEXT NOT NULL,
                 detect_json TEXT,
                 simulation_json TEXT,
+                content_json TEXT,
                 feedback_status TEXT,
                 feedback_note TEXT
             )
@@ -72,6 +73,10 @@ def _create_tables(db_path: Path) -> None:
             pass
         try:
             conn.execute("ALTER TABLE analysis_history ADD COLUMN simulation_json TEXT")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            conn.execute("ALTER TABLE analysis_history ADD COLUMN content_json TEXT")
         except sqlite3.OperationalError:
             pass
         conn.commit()
@@ -192,7 +197,8 @@ def get_history(record_id: str) -> dict[str, Any] | None:
     select_sql = """
         SELECT id, created_at, input_text, risk_label, risk_score,
                detected_scenario, evidence_domains, report_json,
-               detect_json, simulation_json, feedback_status, feedback_note
+               detect_json, simulation_json, content_json,
+               feedback_status, feedback_note
         FROM analysis_history
         WHERE id = ?
         """
@@ -227,6 +233,13 @@ def get_history(record_id: str) -> dict[str, Any] | None:
             simulation = json.loads(row["simulation_json"])
         except json.JSONDecodeError:
             pass
+
+    content = None
+    if row["content_json"]:
+        try:
+            content = json.loads(row["content_json"])
+        except json.JSONDecodeError:
+            pass
     
     return {
         "id": row["id"],
@@ -239,9 +252,39 @@ def get_history(record_id: str) -> dict[str, Any] | None:
         "report": json.loads(row["report_json"]),
         "detect_data": detect_data,
         "simulation": simulation,
+        "content": content,
         "feedback_status": row["feedback_status"],
         "feedback_note": row["feedback_note"],
     }
+
+
+def update_content(record_id: str, content: dict[str, Any]) -> bool:
+    """更新历史记录的 content 数据（应对内容生成结果，可为部分字段）"""
+    init_db()
+    db_path = _get_active_db_path()
+    content_json = json.dumps(jsonable_encoder(content), ensure_ascii=False)
+    update_sql = """
+        UPDATE analysis_history
+        SET content_json = ?
+        WHERE id = ?
+        """
+    params = (content_json, record_id)
+
+    try:
+        with sqlite3.connect(db_path) as conn:
+            cur = conn.execute(update_sql, params)
+            conn.commit()
+            return cur.rowcount > 0
+    except sqlite3.OperationalError as exc:
+        if not _is_disk_io_error(exc):
+            raise
+        fallback = _set_fallback_db_path()
+        logger.warning("历史库写入失败，已回退到临时目录: %s", fallback)
+        _create_tables(fallback)
+        with sqlite3.connect(fallback) as conn:
+            cur = conn.execute(update_sql, params)
+            conn.commit()
+            return cur.rowcount > 0
 
 
 def save_feedback(record_id: str, status: str, note: str | None) -> bool:

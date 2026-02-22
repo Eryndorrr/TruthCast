@@ -5,3 +5,4 @@ export { ReportCard } from './report-card';
 export { SimulationView } from './simulation-view';
 export { HistoryList } from './history-list';
 export { ExportButton } from './export';
+export { ClarificationCard, FAQList, PlatformScripts } from './content-view';

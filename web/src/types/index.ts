@@ -127,9 +127,84 @@ export type HistoryDetail = {
   report: ReportResponse;
   detect_data?: DetectResponse | null;
   simulation?: SimulateResponse | null;
+  content?: ContentDraft | null;
   feedback_status?: string | null;
   feedback_note?: string | null;
 };
 
-export type Phase = 'detect' | 'claims' | 'evidence' | 'report' | 'simulation';
+export type Phase = 'detect' | 'claims' | 'evidence' | 'report' | 'simulation' | 'content';
 export type PhaseStatus = 'idle' | 'running' | 'done' | 'failed';
+export type PhaseState = Record<Phase, PhaseStatus>;
+
+// ========== 应对内容生成类型 ==========
+
+export type ClarificationStyle = 'formal' | 'friendly' | 'neutral';
+
+export type Platform = 
+  | 'weibo' 
+  | 'wechat' 
+  | 'short_video' 
+  | 'news' 
+  | 'official' 
+  | 'xiaohongshu' 
+  | 'douyin' 
+  | 'kuaishou' 
+  | 'bilibili';
+
+export type FAQItem = {
+  question: string;
+  answer: string;
+  category: string;
+};
+
+export type ClarificationContent = {
+  short: string;
+  medium: string;
+  long: string;
+};
+
+export type ClarificationVariant = {
+  id: string;
+  style: ClarificationStyle;
+  content: ClarificationContent;
+  generated_at: string;
+};
+
+export type PlatformScript = {
+  platform: Platform;
+  content: string;
+  tips: string[];
+  hashtags?: string[] | null;
+  estimated_read_time?: string | null;
+};
+
+export type ContentGenerateRequest = {
+  text: string;
+  report: ReportResponse;
+  simulation?: SimulateResponse | null;
+  clarification?: ClarificationContent | null;
+  style?: ClarificationStyle;
+  platforms?: Platform[];
+  include_faq?: boolean;
+  faq_count?: number;
+};
+
+export type ContentGenerateResponse = {
+  clarification: ClarificationContent;
+  faq: FAQItem[] | null;
+  platform_scripts: PlatformScript[];
+  generated_at: string;
+  based_on: Record<string, unknown>;
+};
+
+// 前端内容生成的"草稿态"：允许按模块（澄清稿/FAQ/平台话术）逐步生成并即时展示
+export type ContentDraft = {
+  clarification?: ClarificationContent;
+  // 支持澄清稿多风格/多版本并存
+  clarifications?: ClarificationVariant[];
+  primary_clarification_id?: string;
+  faq?: FAQItem[] | null;
+  platform_scripts?: PlatformScript[];
+  generated_at?: string;
+  based_on?: Record<string, unknown>;
+};

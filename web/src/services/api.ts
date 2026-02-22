@@ -1,6 +1,9 @@
 import axios from 'axios';
 import type {
   ClaimItem,
+  ContentGenerateRequest,
+  ContentGenerateResponse,
+  ContentDraft,
   DetectResponse,
   EvidenceItem,
   HistoryDetail,
@@ -189,4 +192,41 @@ export async function updateHistorySimulation(
   simulation: SimulateResponse
 ): Promise<void> {
   await api.post(`/history/${recordId}/simulation`, simulation);
+}
+
+export async function updateHistoryContent(
+  recordId: string,
+  content: ContentDraft
+): Promise<void> {
+  await api.post(`/history/${recordId}/content`, content);
+}
+
+// ========== 应对内容生成 API ==========
+
+export async function generateContent(
+  request: ContentGenerateRequest
+): Promise<ContentGenerateResponse> {
+  const { data } = await api.post<ContentGenerateResponse>('/content/generate', request);
+  return data;
+}
+
+export async function generateClarification(
+  request: ContentGenerateRequest
+): Promise<ContentGenerateResponse['clarification']> {
+  const { data } = await api.post<ContentGenerateResponse['clarification']>('/content/clarification', request);
+  return data;
+}
+
+export async function generateFAQ(
+  request: ContentGenerateRequest
+): Promise<ContentGenerateResponse['faq']> {
+  const { data } = await api.post<ContentGenerateResponse['faq']>('/content/faq', request);
+  return data;
+}
+
+export async function generatePlatformScripts(
+  request: ContentGenerateRequest
+): Promise<ContentGenerateResponse['platform_scripts']> {
+  const { data } = await api.post<ContentGenerateResponse['platform_scripts']>('/content/platform-scripts', request);
+  return data;
 }

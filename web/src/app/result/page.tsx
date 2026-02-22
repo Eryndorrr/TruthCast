@@ -8,7 +8,7 @@ import type { Phase } from '@/types';
 import { CheckCircle2 } from 'lucide-react';
 
 export default function ResultPage() {
-  const { text, detectData, claims, rawEvidences, evidences, report, simulation, phases, retryPhase } = usePipelineStore();
+  const { text, detectData, claims, rawEvidences, evidences, report, simulation, content, phases, retryPhase } = usePipelineStore();
 
   const hasReport = report !== null;
   const allDone =
@@ -39,6 +39,7 @@ export default function ResultPage() {
               evidences,
               report,
               simulation,
+              content: content ?? null,
               exportedAt: new Date().toLocaleString('zh-CN'),
             }}
           />

@@ -5,8 +5,15 @@ from app.schemas.detect import (
     HistoryFeedbackRequest,
     HistoryListResponse,
     SimulateResponse,
+    ContentDraftData,
 )
-from app.services.history_store import get_history, list_history, save_feedback, update_simulation
+from app.services.history_store import (
+    get_history,
+    list_history,
+    save_feedback,
+    update_simulation,
+    update_content,
+)
 
 router = APIRouter(prefix="/history", tags=["history"])
 
@@ -35,6 +42,15 @@ def history_feedback(record_id: str, payload: HistoryFeedbackRequest) -> dict[st
 @router.post("/{record_id}/simulation")
 def history_update_simulation(record_id: str, payload: SimulateResponse) -> dict[str, str]:
     ok = update_simulation(record_id=record_id, simulation=payload.model_dump())
+    if not ok:
+        raise HTTPException(status_code=404, detail="history not found")
+    return {"status": "ok"}
+
+
+@router.post("/{record_id}/content")
+def history_update_content(record_id: str, payload: ContentDraftData) -> dict[str, str]:
+    """更新历史记录的应对内容生成结果"""
+    ok = update_content(record_id=record_id, content=payload.model_dump())
     if not ok:
         raise HTTPException(status_code=404, detail="history not found")
     return {"status": "ok"}

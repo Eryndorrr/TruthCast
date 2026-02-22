@@ -2,10 +2,12 @@ import { create } from 'zustand';
 import { toast } from 'sonner';
 import type {
   ClaimItem,
+  ContentDraft,
   DetectResponse,
   EvidenceItem,
   Phase,
   PhaseStatus,
+  PhaseState,
   ReportResponse,
   SimulateResponse,
   HistoryDetail,
@@ -22,14 +24,6 @@ import {
 } from '@/services/api';
 import type { SimulationStreamEvent } from '@/services/api';
 
-interface PhaseState {
-  detect: PhaseStatus;
-  claims: PhaseStatus;
-  evidence: PhaseStatus;
-  report: PhaseStatus;
-  simulation: PhaseStatus;
-}
-
 interface PipelineState {
   text: string;
   error: string | null;
@@ -40,6 +34,8 @@ interface PipelineState {
   evidences: EvidenceItem[];
   report: ReportResponse | null;
   simulation: SimulateResponse | null;
+  // 内容生成允许"逐步生成"，因此使用 ContentDraft 保存阶段性结果
+  content: ContentDraft | null;
   phases: PhaseState;
   isFromHistory: boolean;
   recordId: string | null;
@@ -47,6 +43,7 @@ interface PipelineState {
   setText: (text: string) => void;
   setPhase: (phase: Phase, status: PhaseStatus) => void;
   setError: (error: string | null) => void;
+  setContent: (content: ContentDraft | null) => void;
   runPipeline: () => Promise<void>;
   retryPhase: (phase: Phase) => Promise<void>;
   retryFailed: () => Promise<void>;
@@ -60,6 +57,7 @@ const INIT_PHASE_STATE: PhaseState = {
   evidence: 'idle',
   report: 'idle',
   simulation: 'idle',
+  content: 'idle',
 };
 
 const initialState = {
@@ -72,6 +70,7 @@ const initialState = {
   evidences: [] as EvidenceItem[],
   report: null as ReportResponse | null,
   simulation: null as SimulateResponse | null,
+  content: null as ContentDraft | null,
   phases: INIT_PHASE_STATE,
   isFromHistory: false,
   recordId: null as string | null,
@@ -89,6 +88,8 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
 
   setError: (error) => set({ error }),
 
+  setContent: (content) => set({ content }),
+
   reset: () => set(initialState),
 
   runPipeline: async () => {
@@ -103,8 +104,11 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
       evidences: [],
       report: null,
       simulation: null,
+      content: null,
       phases: INIT_PHASE_STATE,
       recordId: null,
+      // 从历史记录回放后再发起新的分析时，必须重置该标记；否则会导致后续写回历史（content/simulation 等）被误拦截
+      isFromHistory: false,
     });
 
     toast.info('开始分析...');
@@ -270,7 +274,12 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
       evidence: 'done',
       report: 'done',
       simulation: (simulation || detail.simulation) ? 'done' : 'idle',
+      content: 'idle',
     };
+
+    if (detail.content) {
+      donePhases.content = 'done';
+    }
 
     set({
       text: detail.input_text,
@@ -281,6 +290,7 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
       evidences,
       report: detail.report,
       simulation: simulation ?? detail.simulation ?? null,
+      content: detail.content ?? null,
       phases: donePhases,
       isFromHistory: true,
       recordId: detail.id,
@@ -296,6 +306,7 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
       evidence: '证据检索',
       report: '综合报告',
       simulation: '舆情预演',
+      content: '应对内容',
     };
 
     // 不再清除下游数据，保留已完成的结果

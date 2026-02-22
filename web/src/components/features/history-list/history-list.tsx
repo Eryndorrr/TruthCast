@@ -185,6 +185,7 @@ export function HistoryList() {
                   evidences: [],
                   report: detail.report,
                   simulation: null,
+                  content: detail.content ?? null,
                   exportedAt: new Date(detail.created_at).toLocaleString('zh-CN'),
                 }}
               />
