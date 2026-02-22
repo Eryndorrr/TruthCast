@@ -10,8 +10,14 @@ LLM 驱动的报告生成模块
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
+
+try:
+    # Windows 环境可能缺少 tzdata；因此 ZoneInfo 仅作为“可用则用”的增强
+    from zoneinfo import ZoneInfo
+except Exception:  # pragma: no cover
+    ZoneInfo = None  # type: ignore
 
 import httpx
 
@@ -129,14 +135,41 @@ def generate_report_with_llm(
         })
         return None
 
+    # ---- Runtime 时间上下文（用于缓解 LLM 将“2026”等年份误判为未来的偏置）----
     current_time = _get_current_time_context()
+    now_utc = datetime.now(timezone.utc)
+    tz_name = os.getenv("TRUTHCAST_REPORT_TZ", "Asia/Hong_Kong").strip() or "Asia/Hong_Kong"
+    local_tz = None
+    if ZoneInfo is not None:
+        try:
+            local_tz = ZoneInfo(tz_name)
+        except Exception:
+            local_tz = None
+    # 最终兜底：固定 UTC+8（避免因 tzdata 缺失导致运行时异常）
+    if local_tz is None:
+        local_tz = timezone(timedelta(hours=8))
+        tz_name = "UTC+08:00"
+    now_local = now_utc.astimezone(local_tz)
+    runtime_utc_iso = now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+    runtime_local_str = now_local.strftime("%Y-%m-%d %H:%M")
+    runtime_date_local = now_local.strftime("%Y-%m-%d")
     claim_evidence_summary = _build_claim_evidence_summary(claims, evidence_alignments)
     
     text_preview = original_text[:800] if len(original_text) > 800 else original_text
 
     prompt = f"""你是事实核查专家，基于以下信息生成综合报告。
 
-【当前时间】
+【系统运行时当前时间（权威基准）】
+- runtime_utc: {runtime_utc_iso}
+- runtime_local: {runtime_local_str} ({tz_name})
+- runtime_date_local: {runtime_date_local}
+
+【时间判断硬规则（必须遵守）】
+1) 仅当文本中出现的日期严格晚于 runtime_date_local（例如 >= {runtime_date_local} 的次日）时，才允许使用“未来/预测性报道/虚构时间/时间指向未来/未来新闻”等表述。
+2) 若文本日期等于或早于 runtime_date_local，禁止使用上述表述；此时只能描述为“同日/近期/时间信息清晰/时间信息缺失”。
+3) 禁止使用模型训练截止时间或常识先验推断“某年份一定是未来”。必须以 runtime_date_local 为准。
+
+【当前时间（兼容旧格式）】
 {current_time}
 
 【原始文本】
@@ -153,7 +186,7 @@ def generate_report_with_llm(
 1. summary: 综合摘要（80-150字）
    - 结合原始文本的语气、措辞
    - 突出关键发现和风险点
-   - 判断是否存在"旧闻新炒"、"时间错位"、"数据夸大"等问题
+   - 仅当你能明确指出“文本中的具体日期”与 runtime_date_local 存在矛盾时，才讨论“旧闻新炒/时间错位/未来报道”；否则不要主动引入这些概念
 
 2. suspicious_points: 2-4个可疑点
    - 主张与证据的矛盾
@@ -166,6 +199,9 @@ def generate_report_with_llm(
 
 4. risk_reasoning: 风险评级理由（50字以内）
    - 综合各方因素的理由
+
+【自检】
+输出前请自查：若你没有证据表明文本日期晚于 runtime_date_local，则 summary 与 suspicious_points 中不得出现：未来/预测性报道/虚构时间/时间指向未来/未来新闻。
 
 输出严格 JSON 格式：
 {{
@@ -187,6 +223,9 @@ def generate_report_with_llm(
         "risk_score": risk_score,
         "scenario": scenario,
         "current_time": current_time,
+        "runtime_utc": runtime_utc_iso,
+        "runtime_local": f"{runtime_local_str} ({tz_name})",
+        "runtime_date_local": runtime_date_local,
     })
 
     system_prompt = "你是事实核查专家，擅长分析新闻文本的可信度并生成专业报告。输出必须为严格的 JSON 格式。"

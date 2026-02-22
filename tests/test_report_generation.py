@@ -141,3 +141,68 @@ class TestGenerateReportWithLlm:
             assert isinstance(result, dict)
         else:
             assert result is None
+
+
+def test_report_prompt_contains_time_rules(monkeypatch):
+    """仅验证 prompt 文案包含时间硬规则与自检，不依赖真实 LLM。"""
+    from app.services import report_generation
+
+    monkeypatch.setattr(report_generation, "REPORT_LLM_ENABLED", True)
+    monkeypatch.setattr(report_generation, "REPORT_LLM_API_KEY", "dummy")
+    monkeypatch.setattr(report_generation, "REPORT_LLM_BASE_URL", "https://example.invalid")
+    monkeypatch.setattr(report_generation, "REPORT_LLM_MODEL", "dummy-model")
+    monkeypatch.setattr(report_generation, "DEBUG_REPORT", False)
+
+    captured = {}
+
+    class DummyResp:
+        status_code = 200
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": (
+                                '{"summary":"ok","suspicious_points":[],"claim_conclusions":[],"risk_reasoning":""}'
+                            )
+                        }
+                    }
+                ]
+            }
+
+    class DummyClient:
+        def __init__(self, timeout=None):
+            self.timeout = timeout
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def post(self, url, headers=None, json=None):
+            captured["url"] = url
+            captured["payload"] = json
+            return DummyResp()
+
+    monkeypatch.setattr(report_generation.httpx, "Client", DummyClient)
+
+    c1 = make_claim("c1", "2026年2月22日发布一则新闻")
+    result = report_generation.generate_report_with_llm(
+        original_text="2026年2月22日，某地发布消息。",
+        claims=[c1],
+        evidence_alignments=[{"final_stance": "insufficient", "notes": [], "evidences": []}],
+        risk_score=50,
+        scenario="general",
+    )
+    assert isinstance(result, dict)
+
+    messages = captured["payload"]["messages"]
+    user_prompt = messages[1]["content"]
+    assert "【时间判断硬规则（必须遵守）】" in user_prompt
+    assert "runtime_date_local" in user_prompt
+    assert "【自检】" in user_prompt
