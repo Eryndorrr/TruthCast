@@ -18,10 +18,11 @@ load_project_env()
 
 # Now safe to import the rest
 from app.cli.commands import analyze, chat, content, export, history, simulate, state
-from app.cli.config import CLIConfig, get_config
+from app.cli.config import get_config
+from app.cli._globals import set_global_config, get_global_config
 
 # Global configuration object (set by callback)
-_global_config: CLIConfig = CLIConfig()
+
 
 
 def config_callback(
@@ -44,13 +45,13 @@ def config_callback(
     ),
 ) -> None:
     """Global options callback. Sets configuration for all commands."""
-    global _global_config
     output_format = "json" if json_output else None
-    _global_config = get_config(
+    config = get_config(
         api_base=api_base,
         timeout=timeout,
         output_format=output_format,  # type: ignore
     )
+    set_global_config(config)
 
 
 app = typer.Typer(
@@ -70,9 +71,9 @@ app.command()(export.export_cmd)
 app.command()(state.state)
 
 
-def get_global_config() -> CLIConfig:
-    """Get the current global CLI configuration."""
-    return _global_config
+
+
+
 
 
 def main() -> None:

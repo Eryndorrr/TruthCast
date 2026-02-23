@@ -37,9 +37,9 @@ class NetworkError(APIError):
     
     def user_friendly_message(self) -> str:
         return (
-            f"❌ 无法连接到服务器\n\n"
-            f"错误: {self.message}\n\n"
-            f"💡 建议:\n"
+            f"[ERROR] Unable to connect to server\n\n"
+            f"Error: {self.message}\n\n"
+            f"Suggestions:\n"
             f"  1. 检查后端服务是否已启动 (uvicorn app.main:app ...)\n"
             f"  2. 检查 --api-base 参数是否正确\n"
             f"  3. 检查网络连接是否正常"
@@ -51,9 +51,9 @@ class TimeoutError(APIError):
     
     def user_friendly_message(self) -> str:
         return (
-            f"⏱️ 请求超时\n\n"
-            f"错误: {self.message}\n\n"
-            f"💡 建议:\n"
+            f"[TIMEOUT] Request timed out\n\n"
+            f"Error: {self.message}\n\n"
+            f"Suggestions:\n"
             f"  1. 检查网络连接\n"
             f"  2. 检查后端服务是否响应缓慢\n"
             f"  3. 尝试增加超时时间 (--timeout 参数)"
@@ -66,9 +66,9 @@ class HTTPStatusError(APIError):
     def user_friendly_message(self) -> str:
         status = self.status_code or "Unknown"
         return (
-            f"⚠️ 服务器错误 (HTTP {status})\n\n"
-            f"错误: {self.message}\n\n"
-            f"响应: {self.response_text[:200]}"
+            f"[SERVER ERROR] (HTTP {status})\n\n"
+            f"Error: {self.message}\n\n"
+            f"Response: {self.response_text[:200]}"
         )
 
 
@@ -77,11 +77,42 @@ class JSONParseError(APIError):
     
     def user_friendly_message(self) -> str:
         return (
-            f"📄 JSON 解析失败\n\n"
-            f"错误: {self.message}\n\n"
-            f"原始响应: {self.response_text[:200]}"
+            f"[JSON ERROR] Failed to parse JSON\n\n"
+            f"Error: {self.message}\n\n"
+            f"原始Response: {self.response_text[:200]}"
         )
 
+
+
+# ============================================================================
+# Stream Context Manager Wrapper
+# ============================================================================
+
+
+class _StreamContextWrapper:
+    """
+    Wrapper around httpx context manager for SSE streaming.
+    Validates status code when entering the context.
+    """
+    
+    def __init__(self, ctx_mgr):
+        self.ctx_mgr = ctx_mgr
+        self.response = None
+    
+    def __enter__(self):
+        self.response = self.ctx_mgr.__enter__()
+        # Check status code after entering context
+        if self.response.status_code >= 400:
+            response_text = self.response.text
+            raise HTTPStatusError(
+                f"HTTP {self.response.status_code}: {response_text[:100]}",
+                status_code=self.response.status_code,
+                response_text=response_text,
+            )
+        return self.response
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return self.ctx_mgr.__exit__(exc_type, exc_val, exc_tb)
 
 # ============================================================================
 # HTTP Client
@@ -231,11 +262,17 @@ class APIClient:
                         f"HTTP error: {str(e)}",
                     ) from e
     
-    def stream(self, method: str, path: str, json: Optional[Dict[str, Any]] = None, **kwargs) -> httpx.Response:
+    def stream(self, method: str, path: str, json: Optional[Dict[str, Any]] = None, **kwargs):
         """
-        Make streaming request and return response object for SSE processing.
+        Make streaming request and return context manager for SSE processing.
         
         Used for SSE (Server-Sent Events) responses.
+        Returns a context manager that yields httpx.Response.
+        
+        Usage:
+            with client.stream("POST", "/simulate/stream", json=payload) as response:
+                for chunk in response.iter_lines():
+                    ...
         
         Raises:
             NetworkError: Connection failure
@@ -247,20 +284,13 @@ class APIClient:
         
         try:
             if method.upper() == "POST":
-                response = self._client.stream(method, path, json=json, **kwargs)
+                # Return the context manager directly; httpx.stream() is a context manager
+                ctx_mgr = self._client.stream(method, path, json=json, **kwargs)
             else:
-                response = self._client.stream(method, path, **kwargs)
+                ctx_mgr = self._client.stream(method, path, **kwargs)
             
-            # Check status code before returning
-            if response.status_code >= 400:
-                response_text = response.text
-                raise HTTPStatusError(
-                    f"HTTP {response.status_code}: {response_text[:100]}",
-                    status_code=response.status_code,
-                    response_text=response_text,
-                )
-            
-            return response
+            # Wrap the context manager to check status code on entry
+            return _StreamContextWrapper(ctx_mgr)
         except httpx.ConnectTimeout as e:
             raise NetworkError(
                 f"Connection timeout: server may be unreachable",
