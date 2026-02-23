@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter
+from fastapi import Query
 
 from app.schemas.pipeline_state import (
     PipelineStateLatestResponse,
@@ -8,7 +9,7 @@ from app.schemas.pipeline_state import (
     PipelineStateUpsertResponse,
     PhaseSnapshot,
 )
-from app.services.pipeline_state_store import load_latest_task, upsert_phase_snapshot
+from app.services.pipeline_state_store import load_latest_task, load_task, upsert_phase_snapshot
 
 
 router = APIRouter(prefix="/pipeline", tags=["pipeline"])
@@ -36,8 +37,8 @@ def save_phase(payload: PipelineStateUpsertRequest) -> PipelineStateUpsertRespon
 
 
 @router.get("/load-latest", response_model=PipelineStateLatestResponse)
-def load_latest() -> PipelineStateLatestResponse:
-    latest = load_latest_task()
+def load_latest(task_id: str | None = Query(default=None)) -> PipelineStateLatestResponse:
+    latest = load_task(task_id) if task_id else load_latest_task()
     if latest is None:
         return PipelineStateLatestResponse(
             task_id="",

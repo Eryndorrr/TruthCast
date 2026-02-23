@@ -121,12 +121,29 @@ def load_latest_task() -> dict[str, Any] | None:
     with sqlite3.connect(db_path) as conn:
         conn.row_factory = sqlite3.Row
         row = conn.execute(
-            "SELECT task_id, input_text, phases_json, meta_json, updated_at FROM pipeline_tasks ORDER BY updated_at DESC LIMIT 1"
+            "SELECT task_id FROM pipeline_tasks ORDER BY updated_at DESC LIMIT 1"
+        ).fetchone()
+        if row is None:
+            return None
+        task_id = str(row["task_id"])
+        return load_task(task_id)
+
+
+def load_task(task_id: str) -> dict[str, Any] | None:
+    """按 task_id 加载任务与各 phase 快照。"""
+
+    init_pipeline_state_db()
+    db_path = _get_active_db_path()
+
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT task_id, input_text, phases_json, meta_json, updated_at FROM pipeline_tasks WHERE task_id = ? LIMIT 1",
+            (task_id,),
         ).fetchone()
         if row is None:
             return None
 
-        task_id = str(row["task_id"])
         snapshots = conn.execute(
             "SELECT phase, status, updated_at, duration_ms, error_message, payload_json FROM pipeline_phase_snapshots WHERE task_id = ?",
             (task_id,),
@@ -142,7 +159,7 @@ def load_latest_task() -> dict[str, Any] | None:
             return None
 
     return {
-        "task_id": task_id,
+        "task_id": str(row["task_id"]),
         "input_text": str(row["input_text"]),
         "phases": _loads(row["phases_json"]) or {},
         "meta": _loads(row["meta_json"]) or {},

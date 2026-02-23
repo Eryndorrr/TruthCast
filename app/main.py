@@ -16,12 +16,14 @@ from app.api.routes_simulate import router as simulate_router
 from app.api.routes_pipeline_state import router as pipeline_router
 from app.core.concurrency import init_semaphore
 from app.services.history_store import init_db
+from app.services.chat_store import init_db as init_chat_db
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 启动时初始化
     init_db()
+    init_chat_db()
     init_semaphore()
     yield
     # 关闭时清理（预留）

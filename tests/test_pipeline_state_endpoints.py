@@ -67,3 +67,10 @@ def test_pipeline_state_save_and_load_latest() -> None:
     assert snap_detect[0]["status"] == "done"
     assert snap_detect[0]["duration_ms"] == 123
 
+    # also support load by task_id (for chat: session_id == task_id)
+    by_id_resp = client.get(f"/pipeline/load-latest?task_id={task_id}")
+    assert by_id_resp.status_code == 200
+    by_id = by_id_resp.json()
+    assert by_id["task_id"] == task_id
+    assert by_id["phases"]["detect"] == "done"
+
