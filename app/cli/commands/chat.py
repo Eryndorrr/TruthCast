@@ -17,6 +17,25 @@ from app.cli.lib.state_manager import get_state_value, update_state
 from app.cli._globals import get_global_config
 
 
+# Detect if console supports unicode/emoji
+def _supports_unicode() -> bool:
+    """Check if console supports unicode output."""
+    try:
+        # Try encoding a test emoji
+        "\u2705".encode(sys.stdout.encoding or 'utf-8')
+        return True
+    except (UnicodeEncodeError, LookupError):
+        return False
+
+
+_UNICODE_SUPPORT = _supports_unicode()
+
+
+def _emoji(unicode_char: str, ascii_fallback: str) -> str:
+    """Return emoji if supported, otherwise ASCII fallback."""
+    return unicode_char if _UNICODE_SUPPORT else ascii_fallback
+
+
 
 def parse_sse_line(line: str) -> Optional[Dict[str, Any]]:
     """
@@ -83,19 +102,19 @@ def render_token(content: str) -> None:
 def render_stage(stage: str, status: str) -> None:
     """Render a stage update."""
     stage_emoji = {
-        "risk": "🔍",
-        "claims": "📋",
-        "evidence_search": "🌐",
-        "evidence_align": "🔗",
-        "report": "📊",
-        "simulation": "🎭",
-        "content": "✍️",
+        "risk": _emoji("🔍", "[RISK]"),
+        "claims": _emoji("📋", "[CLAIMS]"),
+        "evidence_search": _emoji("🌐", "[SEARCH]"),
+        "evidence_align": _emoji("🔗", "[ALIGN]"),
+        "report": _emoji("📊", "[REPORT]"),
+        "simulation": _emoji("🎭", "[SIM]"),
+        "content": _emoji("✍️", "[WRITE]"),
     }
     
     status_emoji = {
-        "running": "⏳",
-        "done": "✅",
-        "failed": "❌",
+        "running": _emoji("⏳", "[LOADING]"),
+        "done": _emoji("✅", "[DONE]"),
+        "failed": _emoji("❌", "[FAILED]"),
     }
     
     stage_name = {
@@ -108,7 +127,7 @@ def render_stage(stage: str, status: str) -> None:
         "content": "应对内容",
     }
     
-    emoji = stage_emoji.get(stage, "📌")
+    emoji = stage_emoji.get(stage, _emoji("📌", "[MARK]"))
     status_mark = status_emoji.get(status, "")
     name = stage_name.get(stage, stage)
     
@@ -158,7 +177,7 @@ def render_message(message: Dict[str, Any]) -> None:
 
 def render_error(error_msg: str) -> None:
     """Render an error message."""
-    print(f"\n❌ 错误: {error_msg}")
+    print(f"\n{_emoji('❌', '[ERROR]')} 错误: {error_msg}")
 
 
 def handle_sse_stream(
@@ -246,7 +265,7 @@ def handle_sse_stream(
     except Exception as e:
         _flush_tokens(force_newline=True)
         _log_line(log_fp, f"[unexpected_error] {e}")
-        print(f"\n❌ 意外错误: {e}", file=sys.stderr)
+        print(f"\n{_emoji('❌', '[ERROR]')} 意外错误: {e}", file=sys.stderr)
     finally:
         try:
             if log_fp is not None:
@@ -460,15 +479,15 @@ def chat(
     
     if not session_id:
         # Create new session
-        print("🔄 创建新会话...")
+        print(_emoji("🔄", "[LOADING]") + " 创建新会话...")
         session_id = create_session(client)
         if not session_id:
-            print("❌ 无法创建会话", file=sys.stderr)
+            print(_emoji("❌", "[ERROR]") + " 无法创建会话", file=sys.stderr)
             raise typer.Exit(1)
 
-        print(f"✅ 会话已创建: {session_id}\n")
+        print(f"{_emoji('✅', '[SUCCESS]')} 会话已创建: {session_id}\n")
     else:
-        print(f"🔄 使用会话: {session_id}\n")
+        print(f"{_emoji('🔄', '[LOADING]')} 使用会话: {session_id}\n")
 
     # Persist the chosen session_id for next time
     assert session_id is not None
@@ -479,7 +498,7 @@ def chat(
     print("TruthCast 对话工作台 - 交互式分析模式")
     print("=" * 60)
     print()
-    print("💡 提示:")
+    print(_emoji('💡', '[TIP]') + " 提示:")
     print("  • 输入 /help 查看可用命令")
     print("  • 输入 /analyze <文本> 开始分析")
     print("  • 输入 /exit 或 quit 退出")

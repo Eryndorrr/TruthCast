@@ -1,6 +1,7 @@
 """Export command - Export analysis results."""
 
 import json
+import sys
 from pathlib import Path
 from typing import Any, Optional
 
@@ -15,6 +16,25 @@ def _default_export_dir() -> Path:
     base = Path.home() / ".truthcast" / "exports"
     base.mkdir(parents=True, exist_ok=True)
     return base
+
+
+# Detect if console supports unicode/emoji
+def _supports_unicode() -> bool:
+    """Check if console supports unicode output."""
+    try:
+        # Try encoding a test emoji
+        "\u2705".encode(sys.stdout.encoding or 'utf-8')
+        return True
+    except (UnicodeEncodeError, LookupError):
+        return False
+
+
+_UNICODE_SUPPORT = _supports_unicode()
+
+
+def _emoji(unicode_char: str, ascii_fallback: str) -> str:
+    """Return emoji if supported, otherwise ASCII fallback."""
+    return unicode_char if _UNICODE_SUPPORT else ascii_fallback
 
 
 def _to_markdown(history_detail: dict[str, Any]) -> str:
@@ -143,13 +163,13 @@ def export_cmd(
     if not record_id:
         record_id = get_state_value("bound_record_id") or None
     if not record_id:
-        typer.echo("❌ 缺少 record_id. 用法: truthcast export --record-id <record_id>", err=True)
+        typer.echo(_emoji('❌', '[ERROR]') + " 缺少 record_id. 用法: truthcast export --record-id <record_id>", err=True)
         typer.echo("   或先用 'truthcast state bind <record_id>' 绑定默认记录", err=True)
         raise typer.Exit(1)
 
     fmt = (format_type or "").strip().lower()
     if fmt not in {"json", "markdown", "md"}:
-        typer.echo(f"❌ 不支持的导出格式: {format_type} (支持: json, markdown)", err=True)
+        typer.echo(f"{_emoji('❌', '[ERROR]')} 不支持的导出格式: {format_type} (支持: json, markdown)", err=True)
         raise typer.Exit(1)
 
     client = APIClient(base_url=config.api_base, timeout=config.timeout, retry_times=config.retry_times)
@@ -181,4 +201,4 @@ def export_cmd(
     except Exception:
         pass
 
-    typer.echo(f"✅ 已导出: {out_path}")
+    typer.echo(f"{_emoji('✅', '[SUCCESS]')} 已导出: {out_path}")
