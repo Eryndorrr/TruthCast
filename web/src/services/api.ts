@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { ExportData } from '@/lib/export';
 import type {
   ClaimItem,
   ContentGenerateRequest,
@@ -23,6 +24,45 @@ const api = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
 });
+
+function parseFilenameFromDisposition(disposition: string | null, fallback: string): string {
+  if (!disposition) return fallback;
+  const match = disposition.match(/filename="?([^";]+)"?/i);
+  return match?.[1] ?? fallback;
+}
+
+async function downloadExportFile(endpoint: '/export/pdf' | '/export/word', payload: ExportData, fallback: string): Promise<void> {
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`导出失败: ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const filename = parseFilenameFromDisposition(response.headers.get('content-disposition'), fallback);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+export async function downloadPdfExport(payload: ExportData): Promise<void> {
+  const dateText = new Date().toISOString().slice(0, 10);
+  await downloadExportFile('/export/pdf', payload, `truthcast-report-${dateText}.pdf`);
+}
+
+export async function downloadWordExport(payload: ExportData): Promise<void> {
+  const dateText = new Date().toISOString().slice(0, 10);
+  await downloadExportFile('/export/word', payload, `truthcast-report-${dateText}.docx`);
+}
 
 export async function detect(text: string): Promise<DetectResponse> {
   const { data } = await api.post<DetectResponse>('/detect', { text });

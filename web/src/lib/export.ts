@@ -91,12 +91,10 @@ function generateMarkdown(data: ExportData): string {
   if (data.claims.length > 0) {
     lines.push('## 主张抽取');
     lines.push('');
-    lines.push('| ID | 主张内容 | 实体 | 时间 | 地点 |');
-    lines.push('|----|----------|------|------|------|');
+    lines.push('| ID | 主张内容 |');
+    lines.push('|----|----------|');
     data.claims.forEach((c) => {
-      lines.push(
-        `| ${c.claim_id} | ${c.claim_text} | ${c.entity || '-'} | ${c.time || '-'} | ${c.location || '-'} |`
-      );
+      lines.push(`| ${c.claim_id} | ${c.claim_text} |`);
     });
     lines.push('');
   }

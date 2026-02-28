@@ -10,6 +10,7 @@ load_project_env()
 from app.api.routes_content import router as content_router
 from app.api.routes_chat import router as chat_router
 from app.api.routes_detect import router as detect_router
+from app.api.routes_export import router as export_router
 from app.api.routes_health import router as health_router
 from app.api.routes_history import router as history_router
 from app.api.routes_simulate import router as simulate_router
@@ -33,13 +34,8 @@ app = FastAPI(title="TruthCast MVP", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],  # 局域网/内网部署：允许所有来源
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -51,3 +47,4 @@ app.include_router(simulate_router)
 app.include_router(pipeline_router)
 app.include_router(history_router)
 app.include_router(content_router)
+app.include_router(export_router)
