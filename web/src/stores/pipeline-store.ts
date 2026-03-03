@@ -220,8 +220,12 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
       }
 
       // 抓取成功，填充数据
+      const title = (result.title || '').trim();
+      const content = (result.content || '').trim();
+      const mergedText = title ? `${title}\n\n${content}` : content;
+
       set({
-        text: result.content,
+        text: mergedText,
         detectData: result.risk,
         strategy: result.risk?.strategy ?? null,
       });
