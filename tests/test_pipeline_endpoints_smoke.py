@@ -47,6 +47,23 @@ def test_report_endpoint() -> None:
         assert "alignment_confidence" in first_evidence
 
 
+def test_report_endpoint_with_source_meta() -> None:
+    response = client.post(
+        "/detect/report",
+        json={
+            "text": "某链接新闻称出现异常情况。",
+            "source_url": "https://example.com/news/1",
+            "source_title": "示例新闻标题",
+            "source_publish_date": "2026-03-03",
+        },
+    )
+    body = response.json()
+    assert response.status_code == 200
+    assert body["source_url"] == "https://example.com/news/1"
+    assert body["source_title"] == "示例新闻标题"
+    assert body["source_publish_date"] == "2026-03-03"
+
+
 def test_simulate_endpoint() -> None:
     response = client.post(
         "/simulate",

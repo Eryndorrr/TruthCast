@@ -80,6 +80,9 @@ export type ReportResponse = {
   risk_label: string;
   detected_scenario: string;
   evidence_domains: string[];
+  source_url?: string | null;
+  source_title?: string | null;
+  source_publish_date?: string | null;
   summary: string;
   suspicious_points: string[];
   claim_reports: ClaimReport[];

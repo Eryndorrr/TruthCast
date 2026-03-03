@@ -33,7 +33,9 @@ _DEFAULT_MAX_CHARS = 8000
 
 # 在模块加载时读取一次，避免每个请求重复调用 os.getenv
 try:
-    _MAX_INPUT_CHARS: int = int(os.getenv("TRUTHCAST_MAX_INPUT_CHARS", _DEFAULT_MAX_CHARS))
+    _MAX_INPUT_CHARS: int = int(
+        os.getenv("TRUTHCAST_MAX_INPUT_CHARS", _DEFAULT_MAX_CHARS)
+    )
 except (ValueError, TypeError):
     _MAX_INPUT_CHARS = _DEFAULT_MAX_CHARS
 
@@ -83,7 +85,9 @@ def detect_claims(payload: ClaimsRequest) -> ClaimsResponse:
             return cached
 
     with llm_slot():
-        result = ClaimsResponse(claims=orchestrator.run_claims(text, strategy=payload.strategy))
+        result = ClaimsResponse(
+            claims=orchestrator.run_claims(text, strategy=payload.strategy)
+        )
 
     if payload.strategy is None:
         claims_cache.set(text, result)
@@ -97,7 +101,9 @@ def detect_evidence(payload: EvidenceRequest) -> EvidenceResponse:
     if text:
         text, _ = _truncate_text(text)
     with llm_slot():
-        evidences = orchestrator.run_evidence(text=text, claims=payload.claims, strategy=payload.strategy)
+        evidences = orchestrator.run_evidence(
+            text=text, claims=payload.claims, strategy=payload.strategy
+        )
     return EvidenceResponse(evidences=evidences)
 
 
@@ -127,9 +133,19 @@ def detect_report(payload: ReportRequest) -> dict:
 
     with llm_slot():
         report = orchestrator.run_report(
-            text=text, claims=payload.claims, evidences=payload.evidences, strategy=payload.strategy
+            text=text,
+            claims=payload.claims,
+            evidences=payload.evidences,
+            strategy=payload.strategy,
+            source_url=payload.source_url,
+            source_title=payload.source_title,
+            source_publish_date=payload.source_publish_date,
         )
-    input_text = text or " ".join((item.claim_text for item in (payload.claims or []))) or "[无原文]"
+    input_text = (
+        text
+        or " ".join((item.claim_text for item in (payload.claims or [])))
+        or "[无原文]"
+    )
 
     detect_data = None
     if payload.detect_data:
@@ -160,7 +176,7 @@ def detect_url(payload: UrlDetectRequest) -> UrlDetectResponse:
             content="",
             publish_date="",
             success=False,
-            error_msg=crawled.error_msg
+            error_msg=crawled.error_msg,
         )
 
     # 获取风险快照
@@ -182,5 +198,5 @@ def detect_url(payload: UrlDetectRequest) -> UrlDetectResponse:
         content=crawled.content,
         publish_date=crawled.publish_date,
         risk=risk_resp,
-        success=True
+        success=True,
     )

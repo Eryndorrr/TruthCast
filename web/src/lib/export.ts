@@ -69,6 +69,21 @@ function generateMarkdown(data: ExportData): string {
   lines.push('> ' + data.inputText.replace(/\n/g, '\n> '));
   lines.push('');
 
+  if (data.report?.source_url || data.report?.source_title || data.report?.source_publish_date) {
+    lines.push('## 原始来源');
+    lines.push('');
+    if (data.report.source_title) {
+      lines.push(`- **标题**: ${data.report.source_title}`);
+    }
+    if (data.report.source_url) {
+      lines.push(`- **链接**: [${data.report.source_url}](${data.report.source_url})`);
+    }
+    if (data.report.source_publish_date) {
+      lines.push(`- **发布时间**: ${data.report.source_publish_date}`);
+    }
+    lines.push('');
+  }
+
   // 风险快照
   if (data.detectData) {
     lines.push('## 风险快照');

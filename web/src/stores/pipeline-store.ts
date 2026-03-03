@@ -40,6 +40,11 @@ interface PipelineState {
   error: string | null;
   detectData: DetectResponse | null;
   strategy: StrategyConfig | null;
+  sourceMeta: {
+    source_url?: string | null;
+    source_title?: string | null;
+    source_publish_date?: string | null;
+  } | null;
   claims: ClaimItem[];
   rawEvidences: EvidenceItem[];
   evidences: EvidenceItem[];
@@ -93,6 +98,11 @@ const initialState = {
   error: null,
   detectData: null as DetectResponse | null,
   strategy: null as StrategyConfig | null,
+  sourceMeta: null as {
+    source_url?: string | null;
+    source_title?: string | null;
+    source_publish_date?: string | null;
+  } | null,
   claims: [] as ClaimItem[],
   rawEvidences: [] as EvidenceItem[],
   evidences: [] as EvidenceItem[],
@@ -126,6 +136,7 @@ function _phasePayload(get: () => PipelineState, phase: Phase): Record<string, u
       return {
         detectData: s.detectData,
         strategy: s.strategy,
+        sourceMeta: s.sourceMeta,
       };
     case 'claims':
       return { claims: s.claims };
@@ -138,6 +149,7 @@ function _phasePayload(get: () => PipelineState, phase: Phase): Record<string, u
       return {
         report: s.report,
         recordId: s.recordId,
+        sourceMeta: s.sourceMeta,
       };
     case 'simulation':
       return { simulation: s.simulation };
@@ -197,6 +209,7 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
       error: null,
       detectData: null,
       strategy: null,
+      sourceMeta: null,
       claims: [],
       rawEvidences: [],
       evidences: [],
@@ -228,6 +241,11 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
         text: mergedText,
         detectData: result.risk,
         strategy: result.risk?.strategy ?? null,
+        sourceMeta: {
+          source_url: result.url,
+          source_title: result.title,
+          source_publish_date: result.publish_date,
+        },
       });
 
       setPhase('detect', 'done');
@@ -333,6 +351,7 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
           case 'detect':
             if (payload.detectData) next.detectData = payload.detectData as DetectResponse;
             if (payload.strategy) next.strategy = payload.strategy as StrategyConfig;
+            if (payload.sourceMeta) next.sourceMeta = payload.sourceMeta;
             break;
           case 'claims':
             if (Array.isArray(payload.claims)) next.claims = payload.claims as ClaimItem[];
@@ -344,6 +363,7 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
           case 'report':
             if (payload.report) next.report = payload.report as ReportResponse;
             if (typeof payload.recordId === 'string') next.recordId = payload.recordId as string;
+            if (payload.sourceMeta) next.sourceMeta = payload.sourceMeta;
             break;
           case 'simulation':
             if (payload.simulation) next.simulation = payload.simulation as SimulateResponse;
@@ -408,6 +428,7 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
       error: null,
       detectData: null,
       strategy: null,
+      sourceMeta: opts?.taskId ? get().sourceMeta : null,
       claims: [],
       rawEvidences: [],
       evidences: [],
@@ -541,12 +562,14 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
         try {
           if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
           const currentDetectData = get().detectData;
+          const currentSourceMeta = get().sourceMeta;
           const reportResponse = await detectReportWithSignal(
             text,
             claimsResult,
             evidenceResult,
             currentDetectData,
             currentStrategy,
+            currentSourceMeta,
             signal
           );
           recordId = reportResponse.record_id;
@@ -556,6 +579,9 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
             risk_label: reportResponse.risk_label,
             detected_scenario: reportResponse.detected_scenario,
             evidence_domains: reportResponse.evidence_domains,
+            source_url: reportResponse.source_url ?? null,
+            source_title: reportResponse.source_title ?? null,
+            source_publish_date: reportResponse.source_publish_date ?? null,
             summary: reportResponse.summary,
             suspicious_points: reportResponse.suspicious_points,
             claim_reports: reportResponse.claim_reports,
@@ -714,6 +740,11 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
       text: detail.input_text,
       error: null,
       detectData: detail.detect_data ?? null,
+      sourceMeta: {
+        source_url: detail.report.source_url ?? null,
+        source_title: detail.report.source_title ?? null,
+        source_publish_date: detail.report.source_publish_date ?? null,
+      },
       claims,
       rawEvidences: evidences,
       evidences,
@@ -786,7 +817,15 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
           const reportEvidences = get().evidences;
           const reportDetectData = get().detectData;
           const reportStrategy = get().strategy;
-          const reportResponse = await detectReport(text, reportClaims, reportEvidences, reportDetectData, reportStrategy);
+          const reportSourceMeta = get().sourceMeta;
+          const reportResponse = await detectReport(
+            text,
+            reportClaims,
+            reportEvidences,
+            reportDetectData,
+            reportStrategy,
+            reportSourceMeta,
+          );
           const newRecordId = reportResponse.record_id;
           const reportResult: ReportResponse = {
             risk_score: reportResponse.risk_score,
@@ -794,6 +833,9 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
             risk_label: reportResponse.risk_label,
             detected_scenario: reportResponse.detected_scenario,
             evidence_domains: reportResponse.evidence_domains,
+            source_url: reportResponse.source_url ?? null,
+            source_title: reportResponse.source_title ?? null,
+            source_publish_date: reportResponse.source_publish_date ?? null,
             summary: reportResponse.summary,
             suspicious_points: reportResponse.suspicious_points,
             claim_reports: reportResponse.claim_reports,

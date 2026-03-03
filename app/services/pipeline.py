@@ -98,6 +98,9 @@ def build_report(
     evidences: list[EvidenceItem],
     original_text: str = "",
     strategy: StrategyConfig | None = None,
+    source_url: str | None = None,
+    source_title: str | None = None,
+    source_publish_date: str | None = None,
 ) -> dict:
     """
     生成综合报告（LLM 可选 + 规则兜底）
@@ -281,6 +284,9 @@ def build_report(
             "risk_label": label,
             "detected_scenario": scenario,
             "evidence_domains": sorted(domain_set),
+            "source_url": source_url,
+            "source_title": source_title,
+            "source_publish_date": source_publish_date,
             "summary": summary
             or f"已处理 {len(claims)} 条主张，匹配 {len(evidences)} 条证据。",
             "suspicious_points": final_suspicious
@@ -301,6 +307,9 @@ def build_report(
         "risk_label": label,
         "detected_scenario": scenario,
         "evidence_domains": sorted(domain_set),
+        "source_url": source_url,
+        "source_title": source_title,
+        "source_publish_date": source_publish_date,
         "summary": fallback.get(
             "summary", f"已处理 {len(claims)} 条主张，匹配 {len(evidences)} 条证据。"
         ),

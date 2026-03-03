@@ -5,26 +5,38 @@ from pydantic import BaseModel, Field
 
 class StrategyConfig(BaseModel):
     max_claims: int = Field(default=5, ge=1, le=20, description="最大主张抽取数量")
-    complexity_level: str = Field(default="medium", description="文本复杂度: simple/medium/complex")
+    complexity_level: str = Field(
+        default="medium", description="文本复杂度: simple/medium/complex"
+    )
     complexity_reason: str = Field(default="", description="复杂度判定理由")
-    
-    evidence_per_claim: int = Field(default=5, ge=1, le=10, description="每条主张最大证据检索数量")
-    risk_level: str = Field(default="medium", description="风险级别: critical/high/medium/low")
+
+    evidence_per_claim: int = Field(
+        default=5, ge=1, le=10, description="每条主张最大证据检索数量"
+    )
+    risk_level: str = Field(
+        default="medium", description="风险级别: critical/high/medium/low"
+    )
     risk_reason: str = Field(default="", description="风险策略理由")
-    
+
     summary_target_min: int = Field(default=1, ge=1, description="证据聚合目标最小数量")
     summary_target_max: int = Field(default=5, ge=1, description="证据聚合目标最大数量")
     enable_summarization: bool = Field(default=True, description="是否启用证据聚合")
 
     is_news: bool = Field(default=True, description="是否判定为新闻文本")
-    news_confidence: float = Field(default=0.5, ge=0.0, le=1.0, description="新闻体裁判定置信度")
-    detected_text_type: str = Field(default="news", description="文本类型: news/opinion/chat/ad/other")
+    news_confidence: float = Field(
+        default=0.5, ge=0.0, le=1.0, description="新闻体裁判定置信度"
+    )
+    detected_text_type: str = Field(
+        default="news", description="文本类型: news/opinion/chat/ad/other"
+    )
     news_reason: str = Field(default="", description="新闻体裁判定理由")
 
 
 class DetectRequest(BaseModel):
     text: str = Field(min_length=5, description="News content to analyze")
-    force: bool = Field(default=False, description="是否强制继续检测（忽略新闻体裁门控）")
+    force: bool = Field(
+        default=False, description="是否强制继续检测（忽略新闻体裁门控）"
+    )
 
 
 class UrlDetectRequest(BaseModel):
@@ -122,6 +134,9 @@ class ReportRequest(BaseModel):
     evidences: list[EvidenceItem] | None = None
     detect_data: DetectResponse | None = None
     strategy: StrategyConfig | None = None
+    source_url: str | None = None
+    source_title: str | None = None
+    source_publish_date: str | None = None
 
 
 class ReportResponse(BaseModel):
@@ -130,6 +145,9 @@ class ReportResponse(BaseModel):
     risk_label: str
     detected_scenario: str
     evidence_domains: list[str]
+    source_url: str | None = None
+    source_title: str | None = None
+    source_publish_date: str | None = None
     summary: str
     suspicious_points: list[str]
     claim_reports: list[ClaimReportItem]
@@ -226,26 +244,29 @@ from enum import Enum
 
 class ClarificationStyle(str, Enum):
     """澄清稿风格"""
-    FORMAL = "formal"      # 正式严肃
+
+    FORMAL = "formal"  # 正式严肃
     FRIENDLY = "friendly"  # 亲切友好
-    NEUTRAL = "neutral"    # 中性客观
+    NEUTRAL = "neutral"  # 中性客观
 
 
 class Platform(str, Enum):
     """发布平台"""
-    WEIBO = "weibo"              # 微博
-    WECHAT = "wechat"            # 微信公众号
+
+    WEIBO = "weibo"  # 微博
+    WECHAT = "wechat"  # 微信公众号
     SHORT_VIDEO = "short_video"  # 短视频口播（通用）
-    NEWS = "news"                # 新闻通稿
-    OFFICIAL = "official"        # 官方声明
+    NEWS = "news"  # 新闻通稿
+    OFFICIAL = "official"  # 官方声明
     XIAOHONGSHU = "xiaohongshu"  # 小红书
-    DOUYIN = "douyin"            # 抖音
-    KUAISHOU = "kuaishou"        # 快手
-    BILIBILI = "bilibili"        # B站
+    DOUYIN = "douyin"  # 抖音
+    KUAISHOU = "kuaishou"  # 快手
+    BILIBILI = "bilibili"  # B站
 
 
 class FAQItem(BaseModel):
     """FAQ 条目"""
+
     question: str = Field(description="问题")
     answer: str = Field(description="回答")
     category: str = Field(default="general", description="分类: core/detail/background")
@@ -253,6 +274,7 @@ class FAQItem(BaseModel):
 
 class ClarificationContent(BaseModel):
     """澄清稿内容"""
+
     short: str = Field(description="短版本，约100字")
     medium: str = Field(description="中版本，约300字")
     long: str = Field(description="长版本，约600字")
@@ -260,6 +282,7 @@ class ClarificationContent(BaseModel):
 
 class PlatformScript(BaseModel):
     """平台话术"""
+
     platform: Platform
     content: str = Field(description="话术内容")
     tips: list[str] = Field(default_factory=list, description="发布建议")
@@ -269,19 +292,24 @@ class PlatformScript(BaseModel):
 
 class ContentGenerateRequest(BaseModel):
     """应对内容生成请求"""
+
     text: str = Field(description="原始新闻文本")
     report: ReportResponse = Field(description="检测报告")
-    simulation: SimulateResponse | None = Field(default=None, description="舆情预演结果")
+    simulation: SimulateResponse | None = Field(
+        default=None, description="舆情预演结果"
+    )
     clarification: ClarificationContent | None = Field(
         default=None,
         description="可选：已生成澄清稿（用于复用，避免多平台话术/FAQ 重复生成澄清稿）",
     )
-    
+
     # 可选参数
-    style: ClarificationStyle = Field(default=ClarificationStyle.NEUTRAL, description="澄清稿风格")
+    style: ClarificationStyle = Field(
+        default=ClarificationStyle.NEUTRAL, description="澄清稿风格"
+    )
     platforms: list[Platform] = Field(
         default_factory=lambda: [Platform.WEIBO, Platform.WECHAT, Platform.SHORT_VIDEO],
-        description="目标平台"
+        description="目标平台",
     )
     include_faq: bool = Field(default=True, description="是否生成FAQ")
     faq_count: int = Field(default=5, ge=3, le=10, description="FAQ条目数量")
@@ -289,10 +317,11 @@ class ContentGenerateRequest(BaseModel):
 
 class ContentGenerateResponse(BaseModel):
     """应对内容生成响应"""
+
     clarification: ClarificationContent = Field(description="澄清稿")
     faq: list[FAQItem] | None = Field(default=None, description="FAQ列表")
     platform_scripts: list[PlatformScript] = Field(description="多平台话术")
-    
+
     # 元数据
     generated_at: str = Field(description="生成时间")
     based_on: dict = Field(description="生成依据摘要")

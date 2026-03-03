@@ -229,6 +229,28 @@ def _build_html(data: ExportDataRequest) -> str:
     parts.append("<h2>原始输入</h2>")
     parts.append(f"<div class='quote'>{escape(data.input_text)}</div>")
 
+    if data.report and (
+        data.report.source_url
+        or data.report.source_title
+        or data.report.source_publish_date
+    ):
+        parts.append("<h2>原始来源</h2>")
+        parts.append("<table><tr><th>项目</th><th>值</th></tr>")
+        parts.append(
+            f"<tr><td>标题</td><td>{escape(_safe(data.report.source_title))}</td></tr>"
+        )
+        source_url = _safe(data.report.source_url)
+        if source_url != "-":
+            parts.append(
+                f"<tr><td>链接</td><td><a href='{escape(source_url)}'>{escape(source_url)}</a></td></tr>"
+            )
+        else:
+            parts.append("<tr><td>链接</td><td>-</td></tr>")
+        parts.append(
+            f"<tr><td>发布时间</td><td>{escape(_safe(data.report.source_publish_date))}</td></tr>"
+        )
+        parts.append("</table>")
+
     if data.detect_data:
         detect = data.detect_data
         parts.append("<h2>风险快照</h2>")
@@ -579,6 +601,20 @@ def generate_word_bytes(data: ExportDataRequest) -> bytes:
 
     doc.add_heading("原始输入", level=2)
     doc.add_paragraph(data.input_text)
+
+    if data.report and (
+        data.report.source_url
+        or data.report.source_title
+        or data.report.source_publish_date
+    ):
+        doc.add_heading("原始来源", level=2)
+        src_table = doc.add_table(rows=3, cols=2)
+        src_table.rows[0].cells[0].text = "标题"
+        src_table.rows[0].cells[1].text = _safe(data.report.source_title)
+        src_table.rows[1].cells[0].text = "链接"
+        src_table.rows[1].cells[1].text = _safe(data.report.source_url)
+        src_table.rows[2].cells[0].text = "发布时间"
+        src_table.rows[2].cells[1].text = _safe(data.report.source_publish_date)
 
     if data.detect_data:
         detect = data.detect_data

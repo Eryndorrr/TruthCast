@@ -131,6 +131,9 @@ export interface DetectReportResult {
   risk_label: string;
   detected_scenario: string;
   evidence_domains: string[];
+  source_url?: string | null;
+  source_title?: string | null;
+  source_publish_date?: string | null;
   summary: string;
   suspicious_points: string[];
   claim_reports: Array<{
@@ -177,7 +180,8 @@ export async function detectReport(
   claims?: ClaimItem[],
   evidences?: EvidenceItem[],
   detectData?: DetectResponse | null,
-  strategy?: StrategyConfig | null
+  strategy?: StrategyConfig | null,
+  sourceMeta?: { source_url?: string | null; source_title?: string | null; source_publish_date?: string | null } | null
 ): Promise<DetectReportResult> {
   const { data } = await api.post<DetectReportResult>('/detect/report', {
     text,
@@ -185,6 +189,9 @@ export async function detectReport(
     evidences,
     detect_data: detectData,
     strategy,
+    source_url: sourceMeta?.source_url,
+    source_title: sourceMeta?.source_title,
+    source_publish_date: sourceMeta?.source_publish_date,
   });
   return data;
 }
@@ -195,6 +202,7 @@ export async function detectReportWithSignal(
   evidences?: EvidenceItem[],
   detectData?: DetectResponse | null,
   strategy?: StrategyConfig | null,
+  sourceMeta?: { source_url?: string | null; source_title?: string | null; source_publish_date?: string | null } | null,
   signal?: AbortSignal
 ): Promise<DetectReportResult> {
   const { data } = await api.post<DetectReportResult>(
@@ -205,6 +213,9 @@ export async function detectReportWithSignal(
       evidences,
       detect_data: detectData,
       strategy,
+      source_url: sourceMeta?.source_url,
+      source_title: sourceMeta?.source_title,
+      source_publish_date: sourceMeta?.source_publish_date,
     },
     { signal }
   );
